@@ -99,4 +99,9 @@ class TeacherController extends Controller
         return $this->responseJson(Errcode::SUCCESS, $students);
     }
 
+    public function getChatHistory(Request $request)
+    {
+
+    }
+
 }
