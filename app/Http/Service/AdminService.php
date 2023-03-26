@@ -1,0 +1,105 @@
+<?php
+// App\Http\Service/AdminService
+// author: zoueature
+// eamil: zoueature@gmail.com
+// ------------------------------------
+
+
+namespace App\Http\Service;
+
+
+use App\Http\Constant\CacheKey;
+use App\Http\Constant\Role;
+use App\Jobs\EmailSender;
+use App\Student;
+use App\Teacher;
+use Illuminate\Support\Facades\Cache;
+
+class AdminService extends Service
+{
+    /**
+     * 生成邀请码
+     * @return string
+     */
+    private function generateInviteCode() :string
+    {
+        $code = '';
+        for ($i = 0; $i < 8; $i ++) {
+            $code .= rand(0, 9);
+        }
+        return $code;
+    }
+
+    /**
+     * 分发发送邮件队列
+     * @param $email
+     * @param $schoolId
+     * @return bool
+     */
+    public function sendInviteEmail($email, $schoolId) :bool
+    {
+        $code = $this->generateInviteCode();
+        Cache::put(CacheKey::INVITE_CODE_PREFIX.$email, $code, CacheKey::INVITE_CODE_TTL);
+        $params = [
+            'code' => $code,
+            'email' => $email,
+            'schoolId' => $schoolId,
+        ];
+        EmailSender::dispatch($params);
+        return  true;
+    }
+
+    /**
+     * 检查邀请码是否有效
+     * @param $email
+     * @param $code
+     * @return bool
+     */
+    public function checkCodeValid($email, $code): bool
+    {
+        $storeCode = Cache::get(CacheKey::INVITE_CODE_PREFIX.$email);
+        return $storeCode == $code;
+    }
+
+    /**
+     * 创新新老师
+     * @param $email
+     * @param $code
+     * @param $schoolId
+     * @return bool
+     */
+    public function createNewTeacher($email, $code, $schoolId) :bool
+    {
+        $teacher = new Teacher;
+        $teacher->email = $email;
+        // 邀请码为初始密码
+        $teacher->passowrd = bcrypt($code);
+        $teacher->school_id = $schoolId;
+        $teacher->role = Role::SCHOOL_ROLE_TEACHER;
+        $ok =  $teacher->save();
+        if ($ok) {
+            // 删除邀请码缓存
+            Cache::delete(CacheKey::INVITE_CODE_PREFIX.$email);
+        }
+        return $ok;
+    }
+
+    /**
+     * 学生创建
+     * @param $username
+     * @param $password
+     * @param $schoolId
+     * @return bool
+     */
+    public function createStudent($username, $password, $schoolId) :bool
+    {
+        $student = new Student;
+
+        $student->username = $username;
+        $student->password = bcrypt($password);
+        $student->school_id = $schoolId;
+        $ok = $student->save();
+        return $ok;
+    }
+
+}
