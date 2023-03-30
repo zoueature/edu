@@ -144,7 +144,7 @@ class ChatServer
         $table = new Table(2048);
         $table->column('value', Table::TYPE_STRING, 2048);
         $table->create();
-        $this->ws = new Server('127.0.0.1', '18000');
+        $this->ws = new Server('0.0.0.0', '18000');
         $this->ws->table = $table;
         $this->setHandler();
         $this->ws->start();
