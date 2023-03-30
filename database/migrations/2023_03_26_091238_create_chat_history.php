@@ -15,8 +15,11 @@ class CreateChatHistory extends Migration
     {
         Schema::create('chat_history', function (Blueprint $table) {
             $table->increments('id');
-            $table->bigInteger('teacher_id')->nullable(false)->default(0)->comment('教师id');
-            $table->bigInteger('student_id')->nullable(false)->default(0)->comment('学生id');
+            $table->string('sender_role', 8)->nullable(false)->default('')->comment('消息发送者角色');
+            $table->bigInteger('sender_id')->nullable(false)->default(0)->comment('发送者id');
+            $table->string('receiver_role', 8)->nullable(false)->default('')->comment('消息接收者角色');
+            $table->bigInteger('receiver_id')->nullable(false)->default(0)->comment('消息接收者id');
+            $table->tinyInteger('is_read')->nullable(false)->default(0)->comment('0未读 1已读');
             $table->string('msg', 2000)->nullable(false)->default('')->comment('消息内容');
             $table->timestamps();
         });

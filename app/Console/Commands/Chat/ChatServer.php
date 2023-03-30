@@ -4,6 +4,7 @@ namespace App\Console\Commands\Chat;
 
 use App\ChatHistory;
 use App\Http\Constant\Auth;
+use App\Http\Constant\Common;
 use App\Http\Service\AuthService;
 use App\Student;
 use App\Teacher;
@@ -18,6 +19,8 @@ class ChatServer
     private $auth;
 
     private $userId;
+
+    private $connectUser;
 
     public function __construct(AuthService $authService)
     {
@@ -67,6 +70,7 @@ class ChatServer
                 return;
             }
             $this->userId = $userId;
+            $this->connectUser = $user;
 
 
             // 需求未明确需要检查关注关系
@@ -79,7 +83,6 @@ class ChatServer
             $fdUser[$request->fd] = $user->id;
             $server->table->set("userFd", ['value' => json_encode($userFd)]);
             $server->table->set("fdUser", ['value' => json_encode($fdUser)]);
-            echo "{$user->id} - $userId";
         });
 
         $this->ws->on('message', function (Server $server, $frame) {
@@ -92,10 +95,19 @@ class ChatServer
             }
             if ($event == 'chat') {
                 $msg = $data['msg'];
+                $chatHistory = app(ChatHistory::class);
+                $chatHistory->sender_role = $this->connectUser->role();
+                $chatHistory->sender_id = $this->connectUser->id;
+                $chatHistory->receiver_role = $this->connectUser->role() === Auth::TEACHER_GUARD ? Auth::STUDENT_GUARD : Auth::TEACHER_GUARD;
+                $chatHistory->receiver_id = $this->userId;
+                $chatHistory->msg = $msg;
+
                 $userFd = json_decode($server->table->get("userFd", 'value'), true) ?: [];
 
                 $receiveFd = $userFd[$this->userId] ?? 0;
 
+                $chatHistory->is_read = empty($receiveFd) ? Common::FALSE : Common::TRUE;
+                $chatHistory->save();
                 if (empty($receiveFd)) {
                     // 不在线， 不发送
                     return;

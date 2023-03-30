@@ -49,6 +49,10 @@ Route::group([
     Route::get('/student', 'TeacherController@getSameSchoolStudentList');
     Route::post('/student', 'AdminController@createNewStudent');
     Route::post('/invite', 'AdminController@inviteTeacher');
+    Route::get('/chat/history', 'ChatController@getChatHistory');
+    Route::get('/unread/message', 'ChatController@getUnreadMessage');
+    Route::post('/read/message', 'ChatController@readMessage');
+
 });
 
 
@@ -61,6 +65,9 @@ Route::group([
     Route::post('/teacher/follow', 'StudentController@followTeacher');
     Route::post('/teacher/unfollow', 'StudentController@unfollowTeacher');
     Route::get('/follow/teacher', 'StudentController@followTeacherList');
+    Route::get('/chat/history', 'ChatController@getChatHistory');
+    Route::get('/unread/message', 'ChatController@getUnreadMessage');
+    Route::post('/read/message', 'ChatController@readMessage');
 });
 
 
@@ -71,5 +78,5 @@ Route::group([
 ], function () {
     Route::post('/bind/user', 'AuthController@bindUser');
     Route::get('/bind/user', 'AuthController@getBindUserList');
-    Route::post('/user/switch', 'AuthController@switchToUser');
+    Route::post('/user/switch', 'AuthController@readMessage');
 });

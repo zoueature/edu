@@ -47,6 +47,6 @@ class OauthUser extends Authenticatable
 
     public function createAccessToken($name)
     {
-        return $this->createToken($name, ['oauth-api']);
+        return $this->createToken($name, [Auth::OAUTH_SCOPE]);
     }
 }
