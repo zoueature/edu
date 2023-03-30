@@ -18,7 +18,9 @@ class ChatServer
 
     private $auth;
 
-    private $userId;
+    private $talUserId;
+
+    private $talkRole;
 
     private $connectUser;
 
@@ -64,12 +66,18 @@ class ChatServer
                 $server->close($request->fd);
                 return;
             }
+            $role = $request->get['role'] ?? '';
+            if (empty($role)) {
+                $server->close($request->fd);
+                return;
+            }
             if ($userId == $user->id) {
                 // 禁止自己跟自己聊天
                 $server->close($request->fd);
                 return;
             }
-            $this->userId = $userId;
+            $this->talUserId = $userId;
+            $this->talkRole = $role;
             $this->connectUser = $user;
 
 
@@ -81,8 +89,8 @@ class ChatServer
 
             $userFd[$user->id] = $request->fd;
             $fdUser[$request->fd] = $user->id;
-            $server->table->set("userFd", ['value' => json_encode($userFd)]);
-            $server->table->set("fdUser", ['value' => json_encode($fdUser)]);
+            $server->table->set("userFd-".$this->connectUser->role(), ['value' => json_encode($userFd)]);
+            $server->table->set("fdUser-".$this->connectUser->role(), ['value' => json_encode($fdUser)]);
         });
 
         $this->ws->on('message', function (Server $server, $frame) {
@@ -99,12 +107,12 @@ class ChatServer
                 $chatHistory->sender_role = $this->connectUser->role();
                 $chatHistory->sender_id = $this->connectUser->id;
                 $chatHistory->receiver_role = $this->connectUser->role() === Auth::TEACHER_GUARD ? Auth::STUDENT_GUARD : Auth::TEACHER_GUARD;
-                $chatHistory->receiver_id = $this->userId;
+                $chatHistory->receiver_id = $this->talUserId;
                 $chatHistory->msg = $msg;
 
-                $userFd = json_decode($server->table->get("userFd", 'value'), true) ?: [];
+                $userFd = json_decode($server->table->get("userFd-".$this->talkRole, 'value'), true) ?: [];
 
-                $receiveFd = $userFd[$this->userId] ?? 0;
+                $receiveFd = $userFd[$this->talUserId] ?? 0;
 
                 $chatHistory->is_read = empty($receiveFd) ? Common::FALSE : Common::TRUE;
                 $chatHistory->save();
@@ -125,18 +133,18 @@ class ChatServer
     private function onClose($server, $fd)
     {
 
-        $fdUser = json_decode($server->table->get("fdUser", 'value'), true) ?: [];
+        $fdUser = json_decode($server->table->get("fdUser-".$this->connectUser->role(), 'value'), true) ?: [];
         $userId = $fdUser[$fd] ?? 0;
         // 删除对应关系
         unset($fdUser[$fd]);
         if (empty($userId)) {
             return;
         }
-        $userFd = json_decode($server->table->get("userFd", 'value'), true) ?: [];
+        $userFd = json_decode($server->table->get("userFd-".$this->connectUser->role(), 'value'), true) ?: [];
         unset($userFd[$userId]);
 
-        $server->table->set("userFd", ['value' => json_encode($userFd)]);
-        $server->table->set("fdUser", ['value' => json_encode($fdUser)]);
+        $server->table->set("userFd-".$this->connectUser->role(), ['value' => json_encode($userFd)]);
+        $server->table->set("fdUser-".$this->connectUser->role(), ['value' => json_encode($fdUser)]);
     }
 
     public function listen()
