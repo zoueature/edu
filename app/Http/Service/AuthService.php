@@ -101,6 +101,7 @@ class AuthService extends Service
             $client = OauthLoginClientFactor::getClient($loginType);
             return $client->generateAuthURL();
         } catch (\Exception $e) {
+            Log::error('generate login url error ' . $e->getMessage());
             return '';
         }
 
@@ -116,15 +117,16 @@ class AuthService extends Service
     public function oauthLogin($loginType, $code) :?OauthUser
     {
         try {
-//            $client = OauthLoginClientFactor::getClient($loginType);
-//            $oauthUserId = $client->oauthAuth($code);
+            $client = OauthLoginClientFactor::getClient($loginType);
+            $oauthUserId = $client->oauthAuth($code);
+            // 没有Line账户无法测试， 写死测试
             $oauthUserId = 783943490;
-            $oauthUser = OauthUser::where('login_type', '=', Auth::LOGIN_TYPE_LINE)
+            $oauthUser = OauthUser::where('login_type', '=', $client->loginType())
                 ->where('oauth_user_id', '=', $oauthUserId)
                 ->first();
             if (empty($oauthUser)) {
                 $oauthUser = app(OauthUser::class);
-                $oauthUser->login_type = Auth::LOGIN_TYPE_LINE;
+                $oauthUser->login_type = $client->loginType();
                 $oauthUser->oauth_user_id = $oauthUserId;
                 $oauthUser->save();
             }

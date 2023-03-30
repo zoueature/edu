@@ -39,14 +39,20 @@ class ChatController extends Controller
         $result = [];
         foreach ($unreadList as $unreadMsg) {
             if ($unreadMsg->role === Auth::STUDENT_GUARD) {
-                $sender = Student::find($unreadMsg->sender_id);
+                $sender = Student::find($unreadMsg->sender_id)->toReturn();
+            } elseif ($unreadMsg->role === Auth::TEACHER_GUARD) {
+                $sender = Teacher::find($unreadMsg->sender_id)->toReturn();
             } else {
-                $sender = Teacher::find($unreadMsg->sender_id);
+                $sender = [
+                    'id' => $unreadMsg->sender_id,
+                    'role' => $unreadMsg->sender_role,
+                    'name' => 'System Admin',
+                ];
             }
 
             $result[] = [
                 'num' => $unreadMsg->num,
-                'sender' => $sender->toReturn(),
+                'sender' => $sender,
             ];
         }
         return $this->responseJson(Errcode::SUCCESS, $result);

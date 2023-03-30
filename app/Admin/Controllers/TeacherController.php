@@ -2,6 +2,7 @@
 
 namespace App\Admin\Controllers;
 
+use App\Admin\Actions\Chat\SenderMessage;
 use App\Admin\Actions\User\Forbidden;
 use App\Admin\Actions\User\Recover;
 use App\Teacher;
@@ -37,6 +38,8 @@ class TeacherController extends AdminController
         $grid->actions(function ($actions) {
             $actions->add(new Recover());
             $actions->add(new Forbidden());
+            $actions->add(new SenderMessage());
+
         });
         return $grid;
     }

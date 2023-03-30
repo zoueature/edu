@@ -2,6 +2,7 @@
 
 namespace App\Admin\Controllers;
 
+use App\Admin\Actions\Chat\SenderMessage;
 use App\Admin\Actions\ReviewApply\Accept;
 use App\Admin\Actions\ReviewApply\Refuse;
 use App\Admin\Actions\User\Forbidden;
@@ -43,6 +44,7 @@ class StudentController extends AdminController
         $grid->actions(function ($actions) {
             $actions->add(new Recover());
             $actions->add(new Forbidden());
+            $actions->add(new SenderMessage());
         });
         return $grid;
     }
