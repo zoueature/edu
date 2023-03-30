@@ -78,5 +78,5 @@ Route::group([
 ], function () {
     Route::post('/bind/user', 'AuthController@bindUser');
     Route::get('/bind/user', 'AuthController@getBindUserList');
-    Route::post('/user/switch', 'AuthController@readMessage');
+    Route::post('/user/switch', 'AuthController@switchToUser');
 });
