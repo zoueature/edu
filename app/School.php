@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Http\Constant\Auth;
 use Illuminate\Database\Eloquent\Model;
 
 class School extends Model
@@ -16,6 +17,17 @@ class School extends Model
     public function students()
     {
         return $this->hasMany(Student::class, 'school_id', 'id');
+    }
 
+    public function toReturn()
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'country' => $this->country,
+            'province' => $this->province,
+            'city' => $this->city,
+            'address' => $this->address,
+        ];
     }
 }

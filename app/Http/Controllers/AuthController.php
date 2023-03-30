@@ -2,43 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\LoginFailException;
 use App\Http\Constant\Auth;
 use App\Http\Constant\Errcode;
-use App\Http\Requests\LoginRequest;
 use App\Http\Service\AuthService;
-use App\Http\Services\LineOauthService;
 use App\Student;
 use App\Teacher;
 use Illuminate\Http\Request;
-use GuzzleHttp\Client;
+use Laravel\Passport\Passport;
 
 class AuthController extends Controller
 {
+    /**
+     * @var AuthService $svc
+     */
+    private $svc;
 
 
-    public function register(Request $request)
+    public function __construct(AuthService $authService)
     {
-        $this->validate($request, [
-            'username' => 'required|min:3',
-            'password' => 'required|min:6',
-        ]);
-
-        $user = Student::create([
-            'username' => $request->username,
-            'password' => bcrypt($request->password),
-            'school_id' => 2,
-            'name' => '',
-            'age' => 22,
-            'grade' => 12,
-            'class' => 12,
-        ]);
-
-        $token = $user->createToken('Edu System')->accessToken;
-
-       $this->responseJson(Errcode::SUCCESS, ['token' => $token]);
+        $this->svc = $authService;
     }
-
 
     /**
      * 教师注册
@@ -65,7 +48,7 @@ class AuthController extends Controller
         }
 
 
-        $token = $user->createToken(Auth::TOKEN_NAME)->accessToken;
+        $token = $user->createAccessToken(Auth::TOKEN_NAME)->accessToken;
 
         return $this->responseJson(Errcode::SUCCESS, ['token' => $token, 'user' => $user->toReturn()]);
     }
@@ -77,18 +60,18 @@ class AuthController extends Controller
      * @param AuthService $svc
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login(Request $request, AuthService $svc)
+    public function login(Request $request)
     {
         $this->validate($request, [
             'username' => 'required',
             'password' => 'required',
             'role' => 'required|in:teacher,student',
         ]);
-        $user = $svc->checkLoginUser($request->input('username'), $request->input('password'), $request->input('role'));
+        $user = $this->svc->checkLoginUser($request->input('username'), $request->input('password'), $request->input('role'));
         if (empty($user)) {
             return $this->responseJson(Errcode::SERVER_ERROR);
         }
-        $token = $user->createToken(Auth::TOKEN_NAME)->accessToken;
+        $token = $user->createAccessToken(Auth::TOKEN_NAME)->accessToken;
         return $this->responseJson(Errcode::SUCCESS, ['token' => $token, 'user' => $user->toReturn()]);
     }
 
@@ -113,6 +96,131 @@ class AuthController extends Controller
     {
         $user = $request->user();
         return $this->responseJson(Errcode::SUCCESS, ['user' => $user->toReturn()]);
+    }
+
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function generateOauthLoginURL(Request $request)
+    {
+        $this->validate($request, [
+           'loginType' => 'required|in:line'
+        ]);
+        return $this->responseJson(
+            Errcode::SUCCESS,
+            [
+                'url' => $this->svc->generateAuthURL($request->input('loginType'))
+            ]
+        );
+    }
+
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function oauthAuth(Request $request)
+    {
+        $this->validate($request, [
+            'loginType' => 'required|in:line',
+            'code' => 'required'
+        ]);
+        $oauthUser = $this->svc->oauthLogin(
+            $request->input('loginType'),
+            $request->input('code')
+        );
+        if (empty($oauthUser)) {
+            return $this->responseJson(Errcode::SERVER_ERROR);
+        }
+        $token = $oauthUser->createAccessToken(Auth::TOKEN_NAME)->accessToken;
+        return $this->responseJson(Errcode::SUCCESS, ['token' => $token, 'user' => $oauthUser->toReturn()]);
+    }
+
+
+    /**
+     * 绑定系统用户和第卅方登录用户
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|void
+     */
+    public function bindUser(Request $request)
+    {
+        $this->validate($request, [
+            'username' => 'required',
+            'password' => 'required',
+            'role' => 'required|in:teacher,student',
+        ]);
+        $oauthUser = $request->user();
+        $user = $this->svc->checkLoginUser($request->input('username'), $request->input('password'), $request->input('role'));
+        if (empty($user)) {
+            return $this->responseJson(Errcode::LOGIN_FAIL);
+        }
+        $ok = $this->svc->bindUser($oauthUser, $user);
+        if (!$ok) {
+            return $this->responseJson(Errcode::SERVER_ERROR);
+        }
+        return $this->success();
+    }
+
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getBindUserList(Request $request)
+    {
+        $oauthUser = $request->user();
+        $relatedStudents = $oauthUser->relatedStudent ?: [];
+        $students = [];
+        foreach ($relatedStudents as $relatedStudent) {
+            $students[] = $relatedStudent->toReturn();
+        }
+        $relatedTeachers = $oauthUser->relatedTeacher ?: [];
+        $teachers = [];
+        foreach ($relatedTeachers as $relatedTeacher) {
+            $teachers[] = $relatedTeacher->toReturn();
+        }
+        return $this->responseJson(
+            Errcode::SUCCESS,
+            [
+                'student' => $students,
+                'teacher' => $teachers,
+            ]
+        );
+    }
+
+    /**
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function switchToUser(Request $request)
+    {
+        $this->validate($request, [
+            'userId' => 'required',
+            'role' => 'required|in:student,teacher'
+        ]);
+        $oauthUser = $request->user();
+        $user = $this->svc->getUserInfo($request->input('role'), $request->input('userId'));
+        if (empty($user)) {
+            return $this->responseJson(Errcode::SERVER_ERROR);
+        }
+        if (!$oauthUser->checkBind($user)) {
+            return $this->responseJson(Errcode::SERVER_ERROR);
+        }
+
+        return $this->responseJson(Errcode::SUCCESS, [
+            'token' => $user->createAccessToken(Auth::TOKEN_NAME)->accessToken,
+            'user' => $user->toReturn(),
+        ]);
+    }
+
+
+    public function getInfoByToken(Request $request)
+    {
+        $token = $request->input('token');
+        return $this->responseJson(Errcode::SUCCESS, $this->svc->checkUserByToken($token, 'student'));
     }
 
 }

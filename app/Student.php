@@ -6,6 +6,7 @@ use App\Http\Constant\Auth;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Passport\Passport;
 
 
 class Student extends Authenticatable
@@ -44,5 +45,39 @@ class Student extends Authenticatable
             'avatar' => $this->avatar ?? '',
             'role' => Auth::STUDENT_GUARD,
         ];
+    }
+
+    public function bindOauthModel()
+    {
+        $model = app(OauthUserBindStudent::class);
+        $model->student_id = $this->id;
+        return $model;
+    }
+
+    public function foreignKey(): string
+    {
+        return 'student_id';
+    }
+
+    public function createAccessToken($name)
+    {
+        return $this->createToken($name, ['student-api']);
+    }
+
+    public function role()
+    {
+        return Auth::STUDENT_GUARD;
+    }
+
+    public function checkFollowed(Student $student) :bool
+    {
+        return StudentFollowTeacher::where('student_id', '=', $student->id)
+            ->where('teacher_id', '=', $this->id)
+            ->count() > 0;
+    }
+
+    public function followTeachers()
+    {
+        return $this->hasManyThrough(Teacher::class, StudentFollowTeacher::class, 'student_id', 'id', 'id', 'teacher_id');
     }
 }

@@ -11,19 +11,14 @@ use Illuminate\Http\Request;
 
 class SchoolController extends Controller
 {
-    /**
-     * @var StudentService $studentSvc
-     */
-    private $studentSvc;
 
     /**
      * @var SchoolService $schoolSvc
      */
     private $schoolSvc;
 
-    public function __construct(StudentService $studentService, SchoolService $schoolService)
+    public function __construct(SchoolService $schoolService)
     {
-        $this->studentSvc = $studentService;
         $this->schoolSvc = $schoolService;
     }
 

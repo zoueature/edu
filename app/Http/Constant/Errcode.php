@@ -14,6 +14,7 @@ class Errcode
     // Common
     const BAD_REQUEST = 100400;
     const SERVER_ERROR = 100500;
+    const LOGIN_FAIL = 100501;
 
     // Student
     const STUDENT_NOT_FOUND = 100;

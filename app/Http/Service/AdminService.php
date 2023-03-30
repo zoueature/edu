@@ -11,9 +11,12 @@ namespace App\Http\Service;
 use App\Http\Constant\CacheKey;
 use App\Http\Constant\Role;
 use App\Jobs\EmailSender;
+use App\SchoolTeacher;
 use App\Student;
 use App\Teacher;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AdminService extends Service
 {
@@ -70,18 +73,27 @@ class AdminService extends Service
      */
     public function createNewTeacher($email, $code, $schoolId) :bool
     {
-        $teacher = new Teacher;
+        $teacher = app(Teacher::class);
         $teacher->email = $email;
         // 邀请码为初始密码
-        $teacher->passowrd = bcrypt($code);
-        $teacher->school_id = $schoolId;
-        $teacher->role = Role::SCHOOL_ROLE_TEACHER;
-        $ok =  $teacher->save();
-        if ($ok) {
-            // 删除邀请码缓存
-            Cache::delete(CacheKey::INVITE_CODE_PREFIX.$email);
+        $teacher->password = bcrypt($code);
+        $teacher->name = explode('@', $email)[0];
+        $schoolTeacher = app(SchoolTeacher::class);
+        $schoolTeacher->school_id = $schoolId;
+        $schoolTeacher->role = Role::SCHOOL_ROLE_TEACHER;
+        try {
+            DB::transaction(function () use ($teacher, $schoolTeacher){
+                $teacher->save();
+                $schoolTeacher->teacher_id = $teacher->id;
+                $schoolTeacher->save();
+            });
+        } catch (\Exception $e) {
+            Log::error('create teacher error : ' . $e->getMessage());
+            return false;
         }
-        return $ok;
+        // 删除邀请码缓存
+        Cache::delete(CacheKey::INVITE_CODE_PREFIX.$email);
+        return true;
     }
 
     /**

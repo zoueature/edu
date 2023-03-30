@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Passport\Passport;
 
 
 class Teacher extends Authenticatable
@@ -20,9 +21,9 @@ class Teacher extends Authenticatable
     protected $fillable = ['email', 'password', 'name'];
     protected $guarded = ['email', 'password'];
 
-    public function schools() :HasMany
+    public function schools()
     {
-        return $this->hasMany(School::class, "id", "school_id");
+        return $this->hasManyThrough(School::class, SchoolTeacher::class, 'teacher_id', 'id', 'id', 'school_id');
     }
 
 
@@ -54,5 +55,34 @@ class Teacher extends Authenticatable
             'role' => Auth::TEACHER_GUARD,
             'isAdmin' => false,
         ];
+    }
+
+    public function bindOauthModel()
+    {
+        $model = app(OauthUserBindTeacher::class);
+        $model->teacher_id = $this->id;
+        return $model;
+    }
+
+    public function foreignKey(): string
+    {
+        return 'teacher_id';
+    }
+
+    public function createAccessToken($name)
+    {
+        return $this->createToken($name, ['teacher-api']);
+    }
+
+    public function role()
+    {
+        return Auth::TEACHER_GUARD;
+    }
+
+    public function checkFollowed(Teacher $teacher) :bool
+    {
+        return StudentFollowTeacher::where('student_id', '=', $this->id)
+                ->where('teacher_id', '=', $teacher->id)
+                ->count() > 0;
     }
 }

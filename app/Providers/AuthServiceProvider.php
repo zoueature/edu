@@ -26,6 +26,11 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         Passport::routes();
+        Passport::tokensCan([
+            'student-api' => 'student api',
+            'teacher-api' => 'teacher api',
+            'oauth-api' => 'oauth api',
+        ]);
         //
     }
 }

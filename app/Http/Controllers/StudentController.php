@@ -84,7 +84,7 @@ class StudentController extends Controller
         }
         $ok = $this->followSvc->unfollowTeacher($student, $teacher);
         if (!$ok) {
-            return $this->responseJson(Errcode::FOLLOW_TEACHER_FAIL);
+            return $this->responseJson(Errcode::UNFOLLOW_TEACHER_FAIL);
         }
         return $this->success();
     }
@@ -113,6 +113,25 @@ class StudentController extends Controller
             $tmp = $teacher->toReturn();
             $tmp['school'] = $school->name;
             $tmp['followed'] = isset($followTeacherMap[$teacher->id]);
+            $result[] = $tmp;
+        }
+        return $this->responseJson(Errcode::SUCCESS, $result);
+    }
+
+    /**
+     * 关注的教师列表
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function followTeacherList(Request $request)
+    {
+        $student = $request->user();
+
+        $teachers = $student->followTeachers;
+        $result = [];
+        foreach ($teachers as $teacher) {
+            $tmp = $teacher->toReturn();
+            $tmp['followed'] = true;
             $result[] = $tmp;
         }
         return $this->responseJson(Errcode::SUCCESS, $result);

@@ -92,7 +92,7 @@ class TeacherController extends Controller
             foreach ($schoolStudents as $student) {
                 $students[] = [
                     'student' => $student->toReturn(),
-                    'school' => $adminSchool,
+                    'school' => $adminSchool->toReturn(),
                 ];
             }
         }
@@ -102,6 +102,27 @@ class TeacherController extends Controller
     public function getChatHistory(Request $request)
     {
 
+    }
+
+    /**
+     * 同学校学生列表
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSameSchoolStudentList(Request $request)
+    {
+        $teacher = $request->user();
+        $schools = $teacher->schools;
+        $students = [];
+        foreach ($schools as $school) {
+            foreach ($school->students as $student) {
+                $students[] = [
+                    'student' => $student->toReturn(),
+                    'school' => $school->toReturn(),
+                ];
+            }
+        }
+        return $this->responseJson(Errcode::SUCCESS, $students);
     }
 
 }

@@ -53,6 +53,10 @@ return [
             'driver'   => 'passport',
             'provider' => 'student',
         ],
+        'oauth' => [
+            'driver'   => 'passport',
+            'provider' => 'oauth',
+        ]
     ],
 
     /*
@@ -84,6 +88,10 @@ return [
         'student' => [
             'driver' => 'eloquent',
             'model' => App\Student::class,
+        ],
+        'oauth' => [
+            'driver' => 'eloquent',
+            'model' => App\OauthUser::class,
         ],
         // 'users' => [
         //     'driver' => 'database',
