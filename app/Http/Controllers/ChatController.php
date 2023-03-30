@@ -24,7 +24,7 @@ class ChatController extends Controller
         $result = [];
         foreach ($chatList as $chat) {
             $result[] = [
-                'type' => $chat->sender_role == $user->role() && $chat->sender_id = $user->id,
+                'type' => ($chat->sender_role == $user->role() && $chat->sender_id = $user->id) ? 'to' : 'from',
                 'msg' => $chat->msg,
                 'time' => $chat->created_at,
             ];

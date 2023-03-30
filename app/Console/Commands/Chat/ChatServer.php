@@ -71,7 +71,7 @@ class ChatServer
                 $server->close($request->fd);
                 return;
             }
-            if ($userId == $user->id) {
+            if ($userId == $user->id && $user->role() == $role) {
                 // 禁止自己跟自己聊天
                 $server->close($request->fd);
                 return;
@@ -84,13 +84,7 @@ class ChatServer
             // 需求未明确需要检查关注关系
 
             // 保存fd与用户之间的关系
-            $userFd = json_decode($server->table->get("userFd", 'value'), true) ?: [];
-            $fdUser = json_decode($server->table->get("fdUser", 'value'), true) ?: [];
-
-            $userFd[$user->id] = $request->fd;
-            $fdUser[$request->fd] = $user->id;
-            $server->table->set("userFd-".$this->connectUser->role(), ['value' => json_encode($userFd)]);
-            $server->table->set("fdUser-".$this->connectUser->role(), ['value' => json_encode($fdUser)]);
+            $this->addFd($server, $user->role(), $user->id, $request->fd);
         });
 
         $this->ws->on('message', function (Server $server, $frame) {
@@ -110,41 +104,61 @@ class ChatServer
                 $chatHistory->receiver_id = $this->talUserId;
                 $chatHistory->msg = $msg;
 
-                $userFd = json_decode($server->table->get("userFd-".$this->talkRole, 'value'), true) ?: [];
+                $fd = $this->getFD($server, $this->talUserId, $this->talkRole);
 
-                $receiveFd = $userFd[$this->talUserId] ?? 0;
-
-                $chatHistory->is_read = empty($receiveFd) ? Common::FALSE : Common::TRUE;
+                $chatHistory->is_read = empty($fd) ? Common::FALSE : Common::TRUE;
                 $chatHistory->save();
-                if (empty($receiveFd)) {
+                if (empty($fd)) {
                     // 不在线， 不发送
                     return;
 
                 }
-                $server->push($receiveFd, $msg);
+                $server->push($fd, $msg);
             }
         });
         $this->ws->on('close', function (Server $server, $fd) {
             // 解除绑定
-            $this->onClose($server, $fd);
+            $this->removeFd($server, $fd);
         });
     }
 
-    private function onClose($server, $fd)
+    private function getFD($server, $userId, $role)
     {
+        $userFd = $this->getUserFD($server);
+        return $userFd["$role-$userId"] ?? 0;
+    }
 
-        $fdUser = json_decode($server->table->get("fdUser-".$this->connectUser->role(), 'value'), true) ?: [];
-        $userId = $fdUser[$fd] ?? 0;
-        // 删除对应关系
-        unset($fdUser[$fd]);
-        if (empty($userId)) {
-            return;
+    private function getUserFD($server)
+    {
+        return json_decode($server->table->get("userFd", 'value'), true) ?: [];
+    }
+
+    private function getFDUser($server)
+    {
+        return json_decode($server->table->get("fdUser", 'value'), true) ?: [];
+    }
+
+    private function addFd($server, $role, $userId, $fd)
+    {
+        $userFd = $this->getUserFD($server);
+        $userFd["$role-$userId"] = $fd;
+        $fdUser = $this->getFDUser($server);
+        $fdUser[$fd] = "$role-$userId";
+        $server->table->set("userFd", ['value' => json_encode($userFd)]);
+        $server->table->set("fdUser", ['value' => json_encode($fdUser)]);
+    }
+
+    private function removeFd($server, $fd)
+    {
+        $fdUser = $this->getFDUser($server);
+        $user = $fdUser[$fd] ?? '';
+        if (!empty($user)) {
+            $userFd = $this->getUserFD($server);
+            unset($userFd[$user]);
+            $server->table->set("userFd", ['value' => json_encode($userFd)]);
         }
-        $userFd = json_decode($server->table->get("userFd-".$this->connectUser->role(), 'value'), true) ?: [];
-        unset($userFd[$userId]);
-
-        $server->table->set("userFd-".$this->connectUser->role(), ['value' => json_encode($userFd)]);
-        $server->table->set("fdUser-".$this->connectUser->role(), ['value' => json_encode($fdUser)]);
+        unset($fdUser[$fd]);
+        $server->table->set("fdUser", ['value' => json_encode($fdUser)]);
     }
 
     public function listen()
