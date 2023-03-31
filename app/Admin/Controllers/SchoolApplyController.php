@@ -36,7 +36,7 @@ class SchoolApplyController extends AdminController
         $grid->column('school.province', __('School Province'));
         $grid->column('school.city', __('School City'));
         $grid->column('school.address', __('School Address'));
-        $grid->column('status', __('Status'));
+        $grid->column('status', __('Status'))->using([0=>'待审核', 1=>'通过', 2=>'拒绝']);
         $grid->column('created_at', __('Created at'));
         $grid->column('updated_at', __('Updated at'));
         $grid->actions(function ($actions) {
