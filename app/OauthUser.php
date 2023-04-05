@@ -30,6 +30,17 @@ class OauthUser extends Authenticatable
                 ->count() > 0;
     }
 
+    public function canBindUser($user) :bool
+    {
+        if ($user->role() == Auth::STUDENT_GUARD) {
+            // 学生可以绑定n个
+            return true;
+        }
+        // 老师只能绑定1个
+        return OauthUserBindTeacher::where('oauth_id', '=', $this->id)
+            ->count() <= 0;
+    }
+
 
     public function toReturn(): array
     {

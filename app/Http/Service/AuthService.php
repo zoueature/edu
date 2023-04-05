@@ -120,7 +120,7 @@ class AuthService extends Service
             $client = OauthLoginClientFactor::getClient($loginType);
             $oauthUserId = $client->oauthAuth($code);
             // 没有Line账户无法测试， 写死测试
-            $oauthUserId = 783943490;
+//            $oauthUserId = 783943490;
             $oauthUser = OauthUser::where('login_type', '=', $client->loginType())
                 ->where('oauth_user_id', '=', $oauthUserId)
                 ->first();
@@ -145,10 +145,21 @@ class AuthService extends Service
      */
     public function bindUser(OauthUser $oauthUser,  $systemUser) :bool
     {
+        // 检查被绑定的用户是否可以被绑定
+        if (!$systemUser->checkCanBind()) {
+            return false;
+        }
+        // 是否第三方登录用户是否可绑定
+        if (!$oauthUser->canBindUser($systemUser)) {
+            return false;
+        }
+
+        // 检查是否已经绑定对应用户
         $bond = $oauthUser->checkBind($systemUser);
         if ($bond) {
             return true;
         }
+        // 绑定
         $bindModel = $systemUser->bindOauthModel();
         $bindModel->oauth_id = $oauthUser->id;
         return $bindModel->save();

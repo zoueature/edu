@@ -80,4 +80,10 @@ class Student extends Authenticatable
     {
         return $this->hasManyThrough(Teacher::class, StudentFollowTeacher::class, 'student_id', 'id', 'id', 'teacher_id');
     }
+
+    public function checkCanBind() :bool
+    {
+        return OauthUserBindStudent::where('student_id', '=', $this->id)
+                ->count() > 0;
+    }
 }
