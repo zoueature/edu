@@ -85,7 +85,7 @@ class StudentController extends AdminController
 
         $form->number('school_id', __('School id'));
         $form->text('username', __('Username'));
-        if ($byCreate) {
+        if (!$byCreate) {
             $form->password('password', __('Password'));
         } else {
             $form->password('password', bcrypt(__('Password')));
