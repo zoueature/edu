@@ -147,11 +147,11 @@ class AuthService extends Service
     {
         // 检查被绑定的用户是否可以被绑定
         if (!$systemUser->checkCanBind()) {
-            return false;
+            throw new \Exception('用户已被绑定');
         }
         // 是否第三方登录用户是否可绑定
         if (!$oauthUser->canBindUser($systemUser)) {
-            return false;
+            throw new \Exception('不满足绑定条件');
         }
 
         // 检查是否已经绑定对应用户

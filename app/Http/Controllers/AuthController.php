@@ -157,9 +157,13 @@ class AuthController extends Controller
         if (empty($user)) {
             return $this->responseJson(Errcode::LOGIN_FAIL);
         }
-        $ok = $this->svc->bindUser($oauthUser, $user);
-        if (!$ok) {
-            return $this->responseJson(Errcode::SERVER_ERROR);
+        try {
+            $ok = $this->svc->bindUser($oauthUser, $user);
+            if (!$ok) {
+                return $this->responseJson(Errcode::SERVER_ERROR);
+            }
+        } catch (\Exception $e) {
+            return $this->responseJson(Errcode::SERVER_ERROR, [], $e->getMessage());
         }
         return $this->success();
     }
