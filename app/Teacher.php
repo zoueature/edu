@@ -89,6 +89,6 @@ class Teacher extends Authenticatable
     public function checkCanBind() :bool
     {
         return OauthUserBindTeacher::where('teacher_id', '=', $this->id)
-                ->count() > 0;
+                ->count() <= 0;
     }
 }
