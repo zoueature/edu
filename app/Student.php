@@ -84,6 +84,6 @@ class Student extends Authenticatable
     public function checkCanBind() :bool
     {
         return OauthUserBindStudent::where('student_id', '=', $this->id)
-                ->count() > 0;
+                ->count() <= 0;
     }
 }
