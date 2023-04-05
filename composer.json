@@ -58,6 +58,9 @@
             "php artisan clear-compiled",
             "chmod -R 777 storage",
             "@php artisan passport:keys"
+        ],
+        "start-job-listener": [
+            "nohup php artisan queue:listen &"
         ]
     },
     "config": {

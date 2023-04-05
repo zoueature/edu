@@ -11,6 +11,7 @@ use App\Student;
 use Encore\Admin\Controllers\AdminController;
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
+use Encore\Admin\Layout\Content;
 use Encore\Admin\Show;
 
 class StudentController extends AdminController
@@ -78,18 +79,38 @@ class StudentController extends AdminController
      *
      * @return Form
      */
-    protected function form()
+    protected function form($byCreate = false)
     {
         $form = new Form(new Student());
 
         $form->number('school_id', __('School id'));
         $form->text('username', __('Username'));
-        $form->password('password', __('Password'));
+        if ($byCreate) {
+            $form->password('password', __('Password'));
+        } else {
+            $form->password('password', bcrypt(__('Password')));
+        }
         $form->text('name', __('Name'));
         $form->text('age', __('Age'));
         $form->text('grade', __('Grade'));
         $form->text('class', __('Class'));
 
         return $form;
+    }
+
+    /**
+     * Create interface.
+     *
+     * @param Content $content
+     *
+     * @return Content
+     */
+    public function create(Content $content)
+    {
+        $form = $this->form(true);
+        return $content
+            ->title($this->title())
+            ->description($this->description['create'] ?? trans('admin.create'))
+            ->body($form);
     }
 }

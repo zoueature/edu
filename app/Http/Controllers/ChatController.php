@@ -38,9 +38,9 @@ class ChatController extends Controller
         $unreadList = $service->getUnReadMsgList($user);
         $result = [];
         foreach ($unreadList as $unreadMsg) {
-            if ($unreadMsg->role === Auth::STUDENT_GUARD) {
+            if ($unreadMsg->role() === Auth::STUDENT_GUARD) {
                 $sender = Student::find($unreadMsg->sender_id)->toReturn();
-            } elseif ($unreadMsg->role === Auth::TEACHER_GUARD) {
+            } elseif ($unreadMsg->role() === Auth::TEACHER_GUARD) {
                 $sender = Teacher::find($unreadMsg->sender_id)->toReturn();
             } else {
                 $sender = [
