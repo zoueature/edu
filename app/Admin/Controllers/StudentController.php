@@ -85,11 +85,7 @@ class StudentController extends AdminController
 
         $form->number('school_id', __('School id'));
         $form->text('username', __('Username'));
-        if (!$byCreate) {
-            $form->password('password', __('Password'));
-        } else {
-            $form->password('password', bcrypt(__('Password')));
-        }
+        $form->password('password', __('Password'));
         $form->text('name', __('Name'));
         $form->text('age', __('Age'));
         $form->text('grade', __('Grade'));
@@ -98,19 +94,16 @@ class StudentController extends AdminController
         return $form;
     }
 
+
     /**
-     * Create interface.
+     * Store a newly created resource in storage.
      *
-     * @param Content $content
-     *
-     * @return Content
+     * @return mixed
      */
-    public function create(Content $content)
+    public function store()
     {
-        $form = $this->form(true);
-        return $content
-            ->title($this->title())
-            ->description($this->description['create'] ?? trans('admin.create'))
-            ->body($form);
+        $form = $this->form();
+        $form->input('password', bcrypt(request()->input('password')));
+        return $form->store();
     }
 }
