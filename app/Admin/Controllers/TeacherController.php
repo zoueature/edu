@@ -3,6 +3,7 @@
 namespace App\Admin\Controllers;
 
 use App\Admin\Actions\Chat\SenderMessage;
+use App\Admin\Actions\Chat\SendLineMessage;
 use App\Admin\Actions\User\Forbidden;
 use App\Admin\Actions\User\Recover;
 use App\Teacher;
@@ -39,6 +40,7 @@ class TeacherController extends AdminController
             $actions->add(new Recover());
             $actions->add(new Forbidden());
             $actions->add(new SenderMessage());
+            $actions->add(new SendLineMessage());
 
         });
         return $grid;
@@ -78,5 +80,17 @@ class TeacherController extends AdminController
         $form->text('name', __('Name'));
 
         return $form;
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @return mixed
+     */
+    public function store()
+    {
+        $form = $this->form();
+        $form->input('password', bcrypt(request()->input('password')));
+        return $form->store();
     }
 }

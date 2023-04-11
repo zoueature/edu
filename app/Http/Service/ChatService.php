@@ -8,9 +8,21 @@ use App\Student;
 use App\Teacher;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\DB;
+use LINE\LINEBot;
+use LINE\LINEBot\HTTPClient\CurlHTTPClient;
 
 class ChatService extends Service
 {
+
+    /**
+     * @var UserService $userService
+     */
+    private $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
     /**
      * 获取聊天记录
      * @param $user
@@ -55,5 +67,33 @@ class ChatService extends Service
             ->where('sender_id', '=', $senderId)
             ->where('is_read', '=', Common::FALSE)
             ->update(['is_read' => Common::TRUE]);
+    }
+
+    /**
+     * 发送line消息
+     * @param $role
+     * @param $userId
+     * @param $message
+     * @return bool
+     * @throws \Exception
+     */
+    public function sendLineMessage($role, $userId, $message)
+    {
+        $user = $this->userService->getUserInfo($role, $userId);
+        if (empty($user)) {
+            throw new \Exception('未找到用户信息');
+        }
+        $lineUsers = $user->bindLineUser;
+        if (empty($lineUsers)) {
+            throw new \Exception('未绑定Line用户');
+        }
+        $lineUser = $lineUsers->first();
+        $httpClient = new CurlHTTPClient(env('LINE_MSG_ACCESS_TOKEN'));
+        $bot = new LINEBot($httpClient, ['channelSecret' => env('LINE_MSG_CHANNEL_SECRET')]);
+        $msgBuilder = new LINEBot\MessageBuilder\TextMessageBuilder($message);
+        $response = $bot->pushMessage($lineUser->oauth_user_id, $msgBuilder);
+        if (!$response->isSucceeded()) {
+            throw new \Exception($response->getHTTPStatus() . ' ' . $response->getRawBody());
+        }
     }
 }

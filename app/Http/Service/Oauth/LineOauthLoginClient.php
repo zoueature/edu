@@ -3,7 +3,6 @@
 namespace App\Http\Service\Oauth;
 
 use App\Http\Constant\Auth;
-use App\OauthUser;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 
@@ -49,15 +48,16 @@ class LineOauthLoginClient implements OauthLoginClient
             $response = $client->post(self::LINE_OAUTH, [
                 'form_params' => $params
             ]);
-            $body = $response->getBody();
+            $body = $response->getBody()->getContents();
             $data = json_decode($body, true);
             $accessToken = $data['access_token'];
+            $tokenType = $data['token_type'];
             $response = $client->get(self::LINE_PROFILE_URL, [
-                'header' => [
-                    'Authorization' => 'Bearer ' . $accessToken,
+                'headers' => [
+                    'Authorization' => "$tokenType $accessToken",
                 ]
             ]);
-            $profile = json_decode($response, true);
+            $profile = json_decode($response->getBody()->getContents(), true);
             return $profile['userId'];
         } catch (\Exception $e) {
             Log::error('login error ' . $e->getMessage());

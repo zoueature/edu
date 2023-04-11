@@ -119,8 +119,10 @@ class AuthService extends Service
         try {
             $client = OauthLoginClientFactor::getClient($loginType);
             $oauthUserId = $client->oauthAuth($code);
-            // 没有Line账户无法测试， 写死测试
-//            $oauthUserId = 783943490;
+            if (empty($oauthUserId)) {
+                Log::error('oauth login error : get user id fail' , func_get_args());
+                return null;
+            }
             $oauthUser = OauthUser::where('login_type', '=', $client->loginType())
                 ->where('oauth_user_id', '=', $oauthUserId)
                 ->first();
@@ -163,6 +165,22 @@ class AuthService extends Service
         $bindModel = $systemUser->bindOauthModel();
         $bindModel->oauth_id = $oauthUser->id;
         return $bindModel->save();
+    }
+
+
+    /**
+     * @param OauthUser $oauthUser
+     * @param $systemUser
+     * @return bool
+     * @throws \Exception
+     */
+    public function unbindUser(OauthUser $oauthUser,  $systemUser) :bool
+    {
+        // 解绑
+        return $systemUser->bindOauthModel()
+            ->where($systemUser->role().'_id', '=', $systemUser->id)
+            ->where('oauth_id', '=', $oauthUser->id)
+            ->delete();
     }
 
     /**

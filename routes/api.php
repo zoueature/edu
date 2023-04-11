@@ -23,6 +23,8 @@ Route::post('register', 'AuthController@teacherRegister');
 Route::get('/oauth/login', 'AuthController@generateOauthLoginURL');
 Route::get('/oauth/auth', 'AuthController@oauthAuth');
 Route::get('/test', 'AuthController@getInfoByToken' );
+Route::get('/line', 'ChatController@sendLineMessage');
+
 
 
 Route::group(['middleware' => 'auth:teacher'], function () {
@@ -71,6 +73,7 @@ Route::group([
 });
 
 
+
 // Oauth user route
 Route::group([
     'prefix' => 'oauth',
@@ -78,5 +81,6 @@ Route::group([
 ], function () {
     Route::post('/bind/user', 'AuthController@bindUser');
     Route::get('/bind/user', 'AuthController@getBindUserList');
+    Route::post('/unbind/user', 'AuthController@unbindUser');
     Route::post('/user/switch', 'AuthController@switchToUser');
 });

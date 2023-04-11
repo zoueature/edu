@@ -91,4 +91,9 @@ class Teacher extends Authenticatable
         return OauthUserBindTeacher::where('teacher_id', '=', $this->id)
                 ->count() <= 0;
     }
+
+    public function bindLineUser()
+    {
+        return $this->hasManyThrough(OauthUser::class, OauthUserBindTeacher::class, 'teacher_id', 'id', 'id', 'oauth_id');
+    }
 }

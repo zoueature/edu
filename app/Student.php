@@ -86,4 +86,10 @@ class Student extends Authenticatable
         return OauthUserBindStudent::where('student_id', '=', $this->id)
                 ->count() <= 0;
     }
+
+    public function bindLineUser()
+    {
+        return $this->hasManyThrough(OauthUser::class, OauthUserBindStudent::class, 'student_id', 'id', 'id', 'oauth_id');
+
+    }
 }

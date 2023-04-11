@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Constant\Errcode;
 use App\Http\Service\AdminService;
 use App\Http\Service\SchoolService;
+use App\Http\Service\UserService;
 use App\Student;
 use Illuminate\Http\Request;
 
@@ -16,17 +17,22 @@ class AdminController extends Controller
      */
     private $adminService;
 
-
-
     /**
      * @var SchoolService $schoolSvc;
      */
     private $schoolSvc;
+
+    /**
+     * @var UserService $userSvc
+     */
+    private $userSvc;
     
-    public function __construct(AdminService $adminService, SchoolService $schoolService)
+    public function __construct(AdminService $adminService, SchoolService $schoolService, UserService $service)
     {
         $this->adminService = $adminService;    
         $this->schoolSvc = $schoolService;
+        $this->userSvc = $service;
+
     }
 
     /**
@@ -44,10 +50,15 @@ class AdminController extends Controller
         if (!$teacher->isAdminInSchool($request->input('schoolId'))) {
             return $this->responseJson(Errcode::TEACHER_NOT_ALLOW);
         }
+        $email = $request->input('email');
+        $teacher = $this->userSvc->getTeacherByEmail($email);
+        if (!empty($teacher)) {
+            return $this->responseJson(Errcode::BAD_REQUEST, [], '邮箱已被注册');
+        }
         // 发送邮件
-        $ok = $this->adminService->sendInviteEmail($request->input('email'), $request->input('schoolId'));
+        $ok = $this->adminService->sendInviteEmail($email, $request->input('schoolId'));
         if (!$ok) {
-            return $this->responseJson(Errcode::SERVER_ERROR);
+            return $this->responseJson(Errcode::SERVER_ERROR, [], '邀请邮件发送失败');
         }
         return $this->success();
     }

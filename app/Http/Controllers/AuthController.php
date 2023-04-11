@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Constant\Auth;
 use App\Http\Constant\Errcode;
 use App\Http\Service\AuthService;
+use App\Http\Service\UserService;
 use App\Student;
 use App\Teacher;
 use Illuminate\Http\Request;
@@ -17,10 +18,16 @@ class AuthController extends Controller
      */
     private $svc;
 
+    /**
+     * @var UserService $userSvc
+     */
+    private $userSvc;
 
-    public function __construct(AuthService $authService)
+
+    public function __construct(AuthService $authService, UserService $service)
     {
         $this->svc = $authService;
+        $this->userSvc = $service;
     }
 
     /**
@@ -164,6 +171,29 @@ class AuthController extends Controller
             }
         } catch (\Exception $e) {
             return $this->responseJson(Errcode::SERVER_ERROR, [], $e->getMessage());
+        }
+        return $this->success();
+    }
+
+    public function unbindUser(Request $request)
+    {
+        $this->validate($request, [
+            'role' => 'required|in:teacher,student',
+            'userId' => 'required',
+        ]);
+        $oauthUser = $request->user();
+        $unbindUser = $this->userSvc->getUserInfo($request->input('role'), $request->input('userId'));
+        if (empty($unbindUser)) {
+            return $this->responseJson(Errcode::BAD_REQUEST, [], '未找到解绑的用户');
+        }
+        $bond = $oauthUser->checkBind($unbindUser);
+        if (!$bond) {
+            return $this->responseJson(Errcode::BAD_REQUEST, [], '无需解绑');
+        }
+
+        $ok = $this->svc->unbindUser($oauthUser, $unbindUser);
+        if (!$ok) {
+            return $this->responseJson(Errcode::SERVER_ERROR, [], '解绑失败');
         }
         return $this->success();
     }

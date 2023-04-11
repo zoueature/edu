@@ -18,10 +18,6 @@ class ChatServer
 
     private $auth;
 
-    private $talUserId;
-
-    private $talkRole;
-
     private $connectUser;
 
     public function __construct(AuthService $authService)
@@ -60,24 +56,22 @@ class ChatServer
                 $server->close($request->fd);
                 return;
             }
-            $userId = $request->get['userId'] ?? 0;
-            if (empty($userId) || empty($this->getTalkUserInfo($user, $userId))) {
-                // 未找到对话的用户数据
-                $server->close($request->fd);
-                return;
-            }
-            $role = $request->get['role'] ?? '';
-            if (empty($role)) {
-                $server->close($request->fd);
-                return;
-            }
-            if ($userId == $user->id && $user->role() == $role) {
-                // 禁止自己跟自己聊天
-                $server->close($request->fd);
-                return;
-            }
-            $this->talUserId = $userId;
-            $this->talkRole = $role;
+//            $userId = $request->get['userId'] ?? 0;
+//            if (empty($userId) || empty($this->getTalkUserInfo($user, $userId))) {
+//                // 未找到对话的用户数据
+//                $server->close($request->fd);
+//                return;
+//            }
+//            $role = $request->get['role'] ?? '';
+//            if (empty($role)) {
+//                $server->close($request->fd);
+//                return;
+//            }
+//            if ($userId == $user->id && $user->role() == $role) {
+//                // 禁止自己跟自己聊天
+//                $server->close($request->fd);
+//                return;
+//            }
             $this->connectUser = $user;
 
 
@@ -91,20 +85,26 @@ class ChatServer
             // 解析消息， 传输到对应fd上
             $data = json_decode($frame->data, true);
             $event = $data['event'] ?? '';
-            if ($event == 'hearbeat') {
+            if ($event == 'heartbeat') {
                 // 心跳检测
                 return;
             }
             if ($event == 'chat') {
                 $msg = $data['msg'];
+                $talkUserId = $data['userId'] ?? 0;
+                $talkUserRole = $data['role'] ?? '';
+                if (empty($talkUserId) || empty($talkUserRole)) {
+                    //
+                    return;
+                }
                 $chatHistory = app(ChatHistory::class);
                 $chatHistory->sender_role = $this->connectUser->role();
                 $chatHistory->sender_id = $this->connectUser->id;
-                $chatHistory->receiver_role = $this->connectUser->role() === Auth::TEACHER_GUARD ? Auth::STUDENT_GUARD : Auth::TEACHER_GUARD;
-                $chatHistory->receiver_id = $this->talUserId;
+                $chatHistory->receiver_role = $talkUserRole;
+                $chatHistory->receiver_id = $talkUserId;
                 $chatHistory->msg = $msg;
 
-                $fd = $this->getFD($server, $this->talUserId, $this->talkRole);
+                $fd = $this->getFD($server, $talkUserId, $talkUserRole);
 
                 $chatHistory->is_read = empty($fd) ? Common::FALSE : Common::TRUE;
                 $chatHistory->save();
