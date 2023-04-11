@@ -109,10 +109,12 @@ class ChatServer
                         //
                         return;
                     }
-                    $roomFd = $this->getUserRoomFd($server, $this->connectUser->role(), $this->connectUser->id);
+            	    $senderUserId = $data['senderId'] ?? 0;
+            	    $senderRole = $data['senderRole'] ?? '';
+                    $roomFd = $this->getUserRoomFd($server, $senderRole, $senderUserId);
                     $chatHistory = app(ChatHistory::class);
-                    $chatHistory->sender_role = $this->connectUser->role();
-                    $chatHistory->sender_id = $this->connectUser->id;
+                    $chatHistory->sender_role = $senderRole;
+                    $chatHistory->sender_id = $senderUserId;
                     $chatHistory->receiver_role = $talkUserRole;
                     $chatHistory->receiver_id = $talkUserId;
                     $chatHistory->msg = $msg;
@@ -124,7 +126,11 @@ class ChatServer
                         }
                         $server->push($fd, json_encode([
                             'msg' => $msg,
-                            'sender' => $this->connectUser->toReturn(),
+                            'sender' => [
+                                 'id' => $senderUserId,
+				 'role' => $senderRole,
+				 'name' => $data['senderName'] ?? '用户',
+			    ],
                             'readed' => $chatHistory->is_read,
                         ]));
                     }
@@ -213,6 +219,7 @@ class ChatServer
         $userFd = $this->getUserFD($server);
         $userFds = $userFd["$role-$userId"] ?? [];
         $userFds[] = $fd;
+	$userFd["$role-$userId"] = $userFds;
         $fdUser = $this->getFDUser($server);
         $fdUser[$fd] = "$role-$userId";
         $server->table->set("userFd", ['value' => json_encode($userFd)]);
