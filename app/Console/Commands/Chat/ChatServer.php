@@ -9,6 +9,7 @@ use App\Http\Service\AuthService;
 use App\Student;
 use App\Teacher;
 use http\Env\Request;
+use Illuminate\Support\Facades\Log;
 use Swoole\WebSocket\Server;
 use \Swoole\Table;
 
@@ -27,11 +28,15 @@ class ChatServer
 
     private function getUserByToken($token)
     {
-        foreach (Auth::SYSTEM_USER_GUARDS_SCOPES as $guard => $scope) {
-            $user = $this->auth->checkUserByToken($token, $guard, $scope);
-            if (!empty($user)) {
-                return $user;
+        try {
+            foreach (Auth::SYSTEM_USER_GUARDS_SCOPES as $guard => $scope) {
+                $user = $this->auth->checkUserByToken($token, $guard, $scope);
+                if (!empty($user)) {
+                    return $user;
+                }
             }
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
         }
         return null;
     }
