@@ -101,7 +101,7 @@ class ChatServer
                     $this->joinRoom($server, $talkUserRole, $talkUserId, $frame->fd);
                     break;
                 case 'out':
-                    $this->quitRoom($server, $talkUserRole, $talkUserId, $frame->fd);
+                    $this->quitRoom($server, $frame->fd);
                     break;
                 case 'chat':
                     $msg = $data['msg'];
@@ -117,21 +117,18 @@ class ChatServer
                     $chatHistory->receiver_id = $talkUserId;
                     $chatHistory->msg = $msg;
                     $chatHistory->is_read = Common::FALSE;
-                    $fd = $this->getFD($server, $talkUserId, $talkUserRole);
-                    if (in_array($fd, $roomFd)) {
-                        $chatHistory->is_read = Common::TRUE;
+                    $fds = $this->getFD($server, $talkUserId, $talkUserRole);
+                    foreach ($fds as $fd) {
+                        if (in_array($fd, $roomFd)) {
+                            $chatHistory->is_read = Common::TRUE;
+                        }
+                        $server->push($fd, json_encode([
+                            'msg' => $msg,
+                            'sender' => $this->connectUser->toReturn(),
+                            'readed' => $chatHistory->is_read,
+                        ]));
                     }
                     $chatHistory->save();
-                    if (empty($fd)) {
-                        // 不在线， 不发送
-                        return;
-
-                    }
-                    $server->push($fd, json_encode([
-                        'msg' => $msg,
-                        'sender' => $this->connectUser->toReturn(),
-                        'readed' => $chatHistory->is_read,
-                    ]));
                     break;
                 case 'heartbeat':
                 default:
@@ -140,13 +137,14 @@ class ChatServer
         $this->ws->on('close', function (Server $server, $fd) {
             // 解除绑定
             $this->removeFd($server, $fd);
+            $this->quitRoom($server, $fd);
         });
     }
 
     private function getFD($server, $userId, $role)
     {
         $userFd = $this->getUserFD($server);
-        return $userFd["$role-$userId"] ?? 0;
+        return $userFd["$role-$userId"] ?? [];
     }
 
     private function getUserFD($server)
@@ -164,6 +162,11 @@ class ChatServer
         return json_decode($server->table->get("roomFd", 'value'), true) ?: [];
     }
 
+    private function getFdRoom($server)
+    {
+        return json_decode($server->table->get("fdRoom", 'value'), true) ?: [];
+    }
+
     private function getUserRoomFd($server, $role, $userId)
     {
         $old = $this->getRoomFd($server);
@@ -177,13 +180,20 @@ class ChatServer
         $old = $this->getRoomFd($server);
         $id = "$role-$userId";
         $old[$id][] = $fd;
+        $fdRoom = $this->getFdRoom($server);
+        $fdRoom[$fd] = $id;
         $server->table->set('roomFd', ['value' => json_encode($old)]);
+        $server->table->set('fdRoom', ['value' => json_encode($fdRoom)]);
     }
 
-    private function quitRoom($server, $role, $userId, $fd)
+    private function quitRoom($server, $fd)
     {
+        $fdRoom = $this->getFdRoom($server);
+        $id = $fdRoom[$fd] ?? '';
+        if (empty($id)) {
+            return;
+        }
         $old = $this->getRoomFd($server);
-        $id = "$role-$userId";
         if (empty($old[$id] ?? [])) {
             return;
         }
@@ -193,12 +203,16 @@ class ChatServer
             }
         }
         $server->table->set('roomFd', ['value' => json_encode($old)]);
+        unset($fdRoom[$fd]);
+        $server->table->set('fdRoom', ['value' => json_encode($fdRoom)]);
+
     }
 
     private function addFd($server, $role, $userId, $fd)
     {
         $userFd = $this->getUserFD($server);
-        $userFd["$role-$userId"] = $fd;
+        $userFds = $userFd["$role-$userId"] ?? [];
+        $userFds[] = $fd;
         $fdUser = $this->getFDUser($server);
         $fdUser[$fd] = "$role-$userId";
         $server->table->set("userFd", ['value' => json_encode($userFd)]);
@@ -211,7 +225,14 @@ class ChatServer
         $user = $fdUser[$fd] ?? '';
         if (!empty($user)) {
             $userFd = $this->getUserFD($server);
-            unset($userFd[$user]);
+            $userFds = $userFd[$user] ?? [];
+            if (!empty($userFds)) {
+                foreach ($userFd[$user] as $index => $storeFd) {
+                    if ($fd == $storeFd) {
+                        unset($userFd[$user][$index]);
+                    }
+                }
+            }
             $server->table->set("userFd", ['value' => json_encode($userFd)]);
         }
         unset($fdUser[$fd]);
