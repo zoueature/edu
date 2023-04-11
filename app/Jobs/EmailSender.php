@@ -47,10 +47,10 @@ class EmailSender implements ShouldQueue
         $domain = env('DOMAIN');
         $url = "$domain/api/teacher/join?email=$email&code=$code&schoolId=$schoolId";
         var_dump($url);
-        Mail::raw("复制连接，加入学校, 登录名为邮箱号，密码是: $code\n$url", function ($message) {
+        Mail::raw("复制连接，加入学校, 登录名为邮箱号，密码是: $code\n$url", function ($message) use ($email) {
            $message->from('kqxianren@gmail.com');
            $message->subject("Edu System: invite you to join school");
-           $message->to('zoueature@qq.com');
+           $message->to($email);
         });
     }
 }
