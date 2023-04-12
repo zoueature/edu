@@ -98,6 +98,21 @@ class AdminService extends Service
     }
 
     /**
+     * 加入学校
+     * @param Teacher $teacher
+     * @param $schoolId
+     * @return bool
+     */
+    public function joinSchool(Teacher $teacher, $schoolId) :bool
+    {
+        $schoolTeacher = app(SchoolTeacher::class);
+        $schoolTeacher->school_id = $schoolId;
+        $schoolTeacher->role = Role::SCHOOL_ROLE_TEACHER;
+        $schoolTeacher->teacher_id = $teacher->id;
+        return $schoolTeacher->save();
+    }
+
+    /**
      * 学生创建
      * @param $username
      * @param $password

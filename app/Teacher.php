@@ -29,11 +29,17 @@ class Teacher extends Authenticatable
 
     public function isAdminInSchool($schoolId): bool
     {
-
         return SchoolTeacher::where('teacher_id','=', $this->id)
             ->where('school_id', '=', $schoolId)
             ->where('role', '=', Role::SCHOOL_ROLE_ADMIN)
             ->count() > 0;
+    }
+
+    public function isInSchool($schoolId): bool
+    {
+        return SchoolTeacher::where('teacher_id','=', $this->id)
+                ->where('school_id', '=', $schoolId)
+                ->count() > 0;
     }
 
     public function findForPassport($email)

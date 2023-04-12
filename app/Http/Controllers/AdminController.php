@@ -51,10 +51,6 @@ class AdminController extends Controller
             return $this->responseJson(Errcode::TEACHER_NOT_ALLOW);
         }
         $email = $request->input('email');
-        $teacher = $this->userSvc->getTeacherByEmail($email);
-        if (!empty($teacher)) {
-            return $this->responseJson(Errcode::BAD_REQUEST, [], '邮箱已被注册');
-        }
         // 发送邮件
         $ok = $this->adminService->sendInviteEmail($email, $request->input('schoolId'));
         if (!$ok) {
@@ -82,7 +78,16 @@ class AdminController extends Controller
             return $this->responseJson(Errcode::TEACHER_CODE_NOT_VALID);
         }
         $schoolId = $request->input('schoolId');
-        $ok = $this->adminService->createNewTeacher($email, $code, $schoolId);
+        $teacher = $this->userSvc->getTeacherByEmail($email);
+        if (empty($teacher)) {
+            $ok = $this->adminService->createNewTeacher($email, $code, $schoolId);
+        } else {
+            if ($teacher->isInSchool($schoolId)) {
+                return $this->responseJson(Errcode::BAD_REQUEST, [], '已经加入学校');
+
+            }
+            $ok = $this->adminService->joinSchool($teacher, $schoolId);
+        }
         if (!$ok) {
             return $this->responseJson(Errcode::CREATE_NEW_TEACHER_ERROR);
         }
